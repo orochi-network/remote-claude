@@ -1,0 +1,26 @@
+# Verdaccio NPM cache proxy — start before dev containers
+#
+# Start:
+#   docker compose -f docker-compose-verdaccio.yaml up -d  # creates orochi-network automatically
+#
+# Web UI: http://localhost:4873
+# Registry URL (for .npmrc): registry=http://verdaccio:4873
+
+services:
+  verdaccio:
+    image: verdaccio/verdaccio:6
+    container_name: verdaccio
+    ports:
+      - "4873:4873"
+    volumes:
+      - ./verdaccio/storage:/verdaccio/storage
+      - ./verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
+    networks:
+      - orochi-network
+    restart: unless-stopped
+
+networks:
+  orochi-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1420"

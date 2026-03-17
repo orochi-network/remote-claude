@@ -1,0 +1,9 @@
+development/
+.env
+.DS_Store
+verdaccio/storage/
+.claude/settings.local.json
+.node_modules/
+target/
+dist/
+build/

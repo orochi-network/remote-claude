@@ -1,0 +1,190 @@
+# Dev environment: Verdaccio npm cache + 9 SSH-accessible containers
+#
+# Start:
+#   cp .env.example .env && vim .env
+#   docker compose -f docker-compose-dev.yaml up -d --build
+#
+# SSH into a container:
+#   ssh -i ~/.ssh/id_dev1 agent@localhost -p 2201
+#
+# Verdaccio web UI: http://localhost:4873
+# npm via Verdaccio (add to host ~/.npmrc or project .npmrc):
+#   registry=http://verdaccio:4873
+#
+# Add/rotate keys: edit ssh/dev-N.pub, then docker compose restart dev-N
+# Reset a container's home (nuke all user state): docker volume rm agent47_dev-N-home
+
+# Shared service configuration for all dev containers
+# Build image separately: docker build --build-arg ARG_USER_ID=1009 --build-arg ARG_GROUP_ID=1009 -t ${DEV_IMAGE:-agent47-dev} claude-code/
+x-dev-base: &dev-base
+  image: ${DEV_IMAGE:-agent47-dev}
+  user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+  networks:
+    - orochi-network
+  depends_on:
+    - verdaccio
+  environment:
+    - TERM=xterm-256color
+    - NPM_CONFIG_PREFIX=/home/agent/.npm-global
+  command: ["tail", "-f", "/dev/null"]
+  tty: true
+  stdin_open: true
+
+services:
+  verdaccio:
+    image: verdaccio/verdaccio:6
+    container_name: verdaccio
+    ports:
+      - "4873:4873"
+    volumes:
+      - ./verdaccio/storage:/verdaccio/storage
+      - ./verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
+    networks:
+      - orochi-network
+    restart: unless-stopped
+
+  dev-1:
+    <<: *dev-base
+    container_name: dev-1
+    hostname: dev-1
+    ports:
+      - "2201:22"
+    volumes:
+      - dev-1-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-1.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_1_MOUNT:-./workspace/dev-1}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-2:
+    <<: *dev-base
+    container_name: dev-2
+    hostname: dev-2
+    ports:
+      - "2202:22"
+    volumes:
+      - dev-2-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-2.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_2_MOUNT:-./workspace/dev-2}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-3:
+    <<: *dev-base
+    container_name: dev-3
+    hostname: dev-3
+    ports:
+      - "2203:22"
+    volumes:
+      - dev-3-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-3.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_3_MOUNT:-./workspace/dev-3}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-4:
+    <<: *dev-base
+    container_name: dev-4
+    hostname: dev-4
+    ports:
+      - "2204:22"
+    volumes:
+      - dev-4-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-4.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_4_MOUNT:-./workspace/dev-4}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-5:
+    <<: *dev-base
+    container_name: dev-5
+    hostname: dev-5
+    ports:
+      - "2205:22"
+    volumes:
+      - dev-5-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-5.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_5_MOUNT:-./workspace/dev-5}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-6:
+    <<: *dev-base
+    container_name: dev-6
+    hostname: dev-6
+    ports:
+      - "2206:22"
+    volumes:
+      - dev-6-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-6.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_6_MOUNT:-./workspace/dev-6}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-7:
+    <<: *dev-base
+    container_name: dev-7
+    hostname: dev-7
+    ports:
+      - "2207:22"
+    volumes:
+      - dev-7-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-7.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_7_MOUNT:-./workspace/dev-7}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-8:
+    <<: *dev-base
+    container_name: dev-8
+    hostname: dev-8
+    ports:
+      - "2208:22"
+    volumes:
+      - dev-8-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-8.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_8_MOUNT:-./workspace/dev-8}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+  dev-9:
+    <<: *dev-base
+    container_name: dev-9
+    hostname: dev-9
+    ports:
+      - "2209:22"
+    volumes:
+      - dev-9-home:/home/agent
+      - ./.npmrc:/home/agent/.npmrc:ro
+      - ./.yarnrc.yml:/home/agent/.yarnrc.yml:ro
+      - ./ssh/dev-9.pub:/home/agent/.ssh/authorized_keys.pub:ro
+      - ${DEV_9_MOUNT:-./workspace/dev-9}:/home/agent/development:rw
+      - /run/docker.sock:/var/run/docker.sock
+
+networks:
+  orochi-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1420"
+
+# Named volumes — persist entire /home/agent per container across down/up
+# First start: Docker seeds volume from image content (zshrc, oh-my-zsh, claude CLI, etc.)
+# Subsequent starts: volume content used as-is (all user changes, claude auth, apt installs preserved)
+volumes:
+  dev-1-home:
+  dev-2-home:
+  dev-3-home:
+  dev-4-home:
+  dev-5-home:
+  dev-6-home:
+  dev-7-home:
+  dev-8-home:
+  dev-9-home:
