@@ -15,8 +15,8 @@ if [ -f ~/.ssh/authorized_keys.pub ]; then
     chmod 600 ~/.ssh/authorized_keys
 fi
 
-# Ensure agent user owns the development directory (bind-mount may be owned by a different UID on host)
-sudo chown "$(id -u):$(id -g)" /home/agent/development
+# Ensure agent user owns the development directory tree (bind-mount may be owned by a different UID on host)
+sudo chown -R "$(id -u):$(id -g)" /home/agent/development
 
 # Grant agent user access to Docker socket without sudo
 # The socket GID varies per host, so we detect it at runtime
