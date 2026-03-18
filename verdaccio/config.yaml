@@ -1,21 +1,45 @@
-storage: /verdaccio/storage
+# Verdaccio Configuration
+# Private npm registry proxy and cache for @orochi-network
+
+storage: ./storage
+plugins: ./plugins
+
+web:
+  title: Orochi Network Registry
+
+auth:
+  htpasswd:
+    file: ./htpasswd
+    max_users: -1
 
 uplinks:
   npmjs:
     url: https://registry.npmjs.org/
     cache: true
+    auth:
+      type: bearer
+      token: "${NPM_ACCESS_TOKEN}"
 
 packages:
-  '@*/*':
+  "@orochi-network/*":
     access: $all
-    proxy: npmjs
-  '**':
-    access: $all
+    publish: $authenticated
+    unpublish: $authenticated
     proxy: npmjs
 
-web:
-  enable: true
-  title: "Orochi NPM Cache"
+  "**":
+    access: $all
+    publish: $authenticated
+    proxy: npmjs
+
+server:
+  keepAliveTimeout: 60
+
+middlewares:
+  audit:
+    enabled: true
+
+log: { type: stdout, format: pretty, level: http }
 
 listen: 0.0.0.0:4873
 
