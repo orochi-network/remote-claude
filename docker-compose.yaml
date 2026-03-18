@@ -1,20 +1,27 @@
-# Dev environment: Verdaccio npm cache + 9 SSH-accessible containers
+# Unified Docker Compose — Orochi Network Dev Environment
+#
+# Services:
+#   - Verdaccio (private npm registry)
+#   - Infrastructure (PostgreSQL, Redis, RabbitMQ)
+#   - Dev containers (9x SSH-accessible)
 #
 # Start:
 #   cp .env.example .env && vim .env
-#   docker compose -f docker-compose-dev.yaml up -d --build
+#   docker compose up -d --build
 #
 # SSH into a container:
 #   ssh -i ~/.ssh/id_dev1 agent@localhost -p 2201
 #
 # Verdaccio web UI: http://localhost:4873
+# RabbitMQ management: http://localhost:15672
+#
 # npm via Verdaccio (add to host ~/.npmrc or project .npmrc):
 #   registry=http://verdaccio:4873
 #
 # Add/rotate keys: edit ssh/dev-N.pub, then docker compose restart dev-N
 # Reset a container's home (nuke all user state): docker volume rm agent47_dev-N-home
 
-# Shared service configuration for all dev containers
+# ─── Shared dev container config ─────────────────────────────────────────────
 # Build image separately: docker build --build-arg ARG_USER_ID=1009 --build-arg ARG_GROUP_ID=1009 -t ${DEV_IMAGE:-agent47-dev} claude-code/
 x-dev-base: &dev-base
   image: ${DEV_IMAGE:-agent47-dev}
@@ -31,6 +38,7 @@ x-dev-base: &dev-base
   stdin_open: true
 
 services:
+  # ─── Verdaccio (Private NPM Registry) ───────────────────────────────────────
   verdaccio:
     image: verdaccio/verdaccio:6
     container_name: verdaccio
@@ -39,10 +47,78 @@ services:
     volumes:
       - ./verdaccio/storage:/verdaccio/storage
       - ./verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
+    env_file:
+      - ./verdaccio/.env
     networks:
       - orochi-network
     restart: unless-stopped
 
+  # ─── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17
+    container_name: infra-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - orochi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: infra-redis
+    restart: unless-stopped
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - orochi-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── RabbitMQ ────────────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: infra-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"       # AMQP
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672" # Management UI
+    networks:
+      - orochi-network
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ─── Dev Containers (SSH-accessible) ─────────────────────────────────────────
   dev-1:
     <<: *dev-base
     container_name: dev-1
@@ -169,16 +245,23 @@ services:
       - ${DEV_9_MOUNT:-./workspace/dev-9}:/home/agent/development:rw
       - /run/docker.sock:/var/run/docker.sock
 
+# ─── Network ──────────────────────────────────────────────────────────────────
 networks:
   orochi-network:
     driver: bridge
     driver_opts:
       com.docker.network.driver.mtu: "1420"
 
-# Named volumes — persist entire /home/agent per container across down/up
-# First start: Docker seeds volume from image content (zshrc, oh-my-zsh, claude CLI, etc.)
-# Subsequent starts: volume content used as-is (all user changes, claude auth, apt installs preserved)
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+# Named volumes — persist data across down/up cycles
 volumes:
+  # Infrastructure
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  # Dev containers — persist entire /home/agent per container
+  # First start: Docker seeds volume from image content (zshrc, oh-my-zsh, claude CLI, etc.)
+  # Subsequent starts: volume content used as-is (all user changes, claude auth, apt installs preserved)
   dev-1-home:
   dev-2-home:
   dev-3-home:
