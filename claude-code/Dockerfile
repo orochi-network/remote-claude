@@ -13,7 +13,7 @@ RUN set -eux && \
       > /etc/apt/sources.list.d/docker.list && \
     sudo apt-get update && \
     sudo apt-get install -y --no-install-recommends docker-ce-cli && \
-    sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
+    sudo apt-get clean
 
 # Disable password auth — pubkey only
 RUN echo "PasswordAuthentication no" | sudo tee -a /etc/ssh/sshd_config && \
